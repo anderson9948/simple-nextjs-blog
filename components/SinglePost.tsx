@@ -11,17 +11,35 @@ import { sanitize } from 'isomorphic-dompurify';
 export async function SinglePost({ slug }: { slug: string }) {
   const post = await getPost(slug);
   const suggestedPosts = await getRelatedPosts(slug);
+  // Defensive: if post or metadata missing, avoid runtime errors and show a friendly message
+  if (!post || !post.metadata) {
+    return (
+      <main className="mx-auto flex flex-col justify-center">
+        <div className="mx-auto w-full max-w-3xl p-8 text-center">
+          <h2 className="text-2xl font-semibold">Post not found</h2>
+          <p className="mt-2 text-zinc-600">This post could not be loaded. If youre running locally, make sure the post exists in <code>data/posts</code> or set your Cosmic environment variables.</p>
+        </div>
+      </main>
+    );
+  }
   return (
     <>
-      {post && post.metadata.hero?.imgix_url && (
-        <img
-          width={1400}
-          height={720}
-          className="mb-5 h-[720px] w-full bg-no-repeat object-cover object-center"
-          src={`${post.metadata.hero?.imgix_url}?w=1400&auto=format,compression`}
-          alt={post.title}
-        />
-      )}
+      {(() => {
+        const rawHero = post && post.metadata && post.metadata.hero?.imgix_url ? post.metadata.hero.imgix_url : '';
+        if (!rawHero) return null;
+        const trimmed = rawHero.trim();
+        const isExternal = /(^https?:)|imgix|:\/\//i.test(trimmed);
+        const heroSrc = isExternal ? `${trimmed}?w=1400&auto=format,compression` : trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+        return (
+          <div className="mx-auto w-full max-w-3xl px-4">
+            <img
+              className="mb-5 w-full h-[240px] sm:h-[300px] md:h-[420px] lg:h-[480px] xl:h-[520px] max-h-[60vh] bg-no-repeat object-cover object-center"
+              src={heroSrc}
+              alt={post.title}
+            />
+          </div>
+        );
+      })()}
       <main className="mx-auto flex flex-col justify-center">
         <div className="mx-auto flex w-full flex-col items-start justify-center px-4 md:flex-row">
           <div className="mt-4 flex justify-start pb-4 md:justify-center md:pb-0 md:pr-20">
@@ -52,11 +70,10 @@ export async function SinglePost({ slug }: { slug: string }) {
                   </div>
                 </div>
                 <hr className="w-full border-t border-zinc-300 pb-8 dark:border-zinc-700" />
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: sanitize(post.metadata.content) ?? '',
-                  }}
-                ></div>
+                {/* render the full content */}
+                <div className="prose prose-md max-w-none text-zinc-700 dark:text-zinc-300">
+                  <div dangerouslySetInnerHTML={{ __html: sanitize(post.metadata.content) ?? '' }} />
+                </div>
               </>
             )}
             <div className="mx-auto mt-8 w-full">
@@ -83,4 +100,4 @@ export async function SinglePost({ slug }: { slug: string }) {
     </>
   );
 }
-export const revalidate = 60;
+// Note: `revalidate` removed for Next 16+ with `cacheComponents` enabled

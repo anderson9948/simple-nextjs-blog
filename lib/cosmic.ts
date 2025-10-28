@@ -11,6 +11,18 @@ export default cosmic;
 
 export async function getGlobalData(): Promise<GlobalData> {
   // Get global data
+  // If the COSMIC_BUCKET_SLUG is not configured, return a sensible default
+  // instead of calling the API (which will log errors). This makes the
+  // local dev experience smoother when env vars are not set.
+  if (!process.env.COSMIC_BUCKET_SLUG) {
+    return Promise.resolve({
+      metadata: {
+        site_title: 'BUMS ALLIANCE',
+        site_tag: '',
+      },
+    } as GlobalData);
+  }
+
   try {
     const data: any = await Promise.resolve(
       cosmic.objects
@@ -30,8 +42,26 @@ export async function getGlobalData(): Promise<GlobalData> {
 }
 
 export async function getAllPosts(): Promise<Post[]> {
+  // If no COSMIC_BUCKET_SLUG configured, read local posts from data/posts
+  if (!process.env.COSMIC_BUCKET_SLUG) {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const dir = path.join(process.cwd(), 'data', 'posts');
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+      const posts = files.map((f) => {
+        const content = fs.readFileSync(path.join(dir, f), 'utf-8');
+        return JSON.parse(content);
+      });
+      return Promise.resolve(posts as Post[]);
+    } catch (e) {
+      console.log('Oof', e);
+      return Promise.resolve([]);
+    }
+  }
+
   try {
-    // Get all posts
+    // Get all posts from Cosmic
     const data: any = await Promise.resolve(
       cosmic.objects
         .find({
@@ -49,8 +79,28 @@ export async function getAllPosts(): Promise<Post[]> {
 }
 
 export async function getPost(slug: string): Promise<Post> {
+  // If no COSMIC_BUCKET_SLUG configured, read local post file
+  if (!process.env.COSMIC_BUCKET_SLUG) {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      // slug may be URL-encoded (eg. 'Guerra%20do%20capitolio') when coming from the route.
+      // Decode it so local filenames with spaces are matched correctly.
+      const safeSlug = decodeURIComponent(String(slug)).trim();
+      const filePath = path.join(process.cwd(), 'data', 'posts', `${safeSlug}.json`);
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        return JSON.parse(content) as Post;
+      }
+      return Promise.resolve({} as Post);
+    } catch (e) {
+      console.log('Oof', e);
+      return Promise.resolve({} as Post);
+    }
+  }
+
   try {
-    // Get post
+    // Get post from Cosmic
     const data: any = await Promise.resolve(
       cosmic.objects
         .findOne({

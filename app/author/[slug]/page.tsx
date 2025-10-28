@@ -11,7 +11,7 @@ export async function generateMetadata({
 }) {
   const author = await getAuthor(params.slug);
   return {
-    title: `${author.title} posts | Simple Next.js Blog`,
+    title: `${author.title} posts | BUMS ALLIANCE`,
   };
 }
 
@@ -24,4 +24,4 @@ export default async ({ params }: { params: { slug: string } }) => {
     </main>
   );
 };
-export const revalidate = 60;
+  // Note: `revalidate` removed for Next 16+ with `cacheComponents` enabled

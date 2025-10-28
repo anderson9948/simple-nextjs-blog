@@ -16,14 +16,20 @@ export async function PostList({ authorSlug }: { authorSlug?: string }) {
         </h1>
       )}
       {!posts && 'You must add at least one Post to your Bucket'}
-      {posts &&
-        posts.map((post) => {
-          return (
-            <div key={post.id}>
-              <PostCard post={post} />
-            </div>
-          );
-        })}
+      {posts && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {posts.map((post) => {
+            return (
+              // each grid cell stretches so PostCard can be full height
+              <div key={post.id} className="flex items-stretch">
+                <div className="w-full">
+                  <PostCard post={post} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
